@@ -1,6 +1,8 @@
 use std::{sync::atomic::{AtomicBool, AtomicUsize}, thread, time::Duration};
 use std::sync::atomic::Ordering::Relaxed;
 
+const TO_PROCESS: usize = 50;
+
 
 fn main() {
     // static STOP: AtomicBool = AtomicBool::new(false);
@@ -25,7 +27,7 @@ fn main() {
 
     thread::scope(|s| {
         s.spawn(|| {
-            for i in 0..20 {
+            for i in 0..TO_PROCESS {
                 process_item(i); // take some time
                 num_done.store(i + 1, Relaxed);
                 main_thread.unpark(); // wake up the main thread
@@ -34,8 +36,8 @@ fn main() {
 
         loop {
             let n = num_done.load(Relaxed);
-            if n == 20 { break; }
-            println!("working.. {n}/20 done");
+            if n == TO_PROCESS { break; }
+            println!("working.. {n}/{TO_PROCESS} done");
             // thread::sleep(Duration::from_secs(1));
             thread::park_timeout(Duration::from_secs(1));
         }
