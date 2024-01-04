@@ -3,8 +3,8 @@ use std::{
     cell::{Cell, RefCell},
     marker::PhantomData,
     rc::Rc,
-    sync::{Arc, Mutex},
-    thread, time::Duration,
+    sync::{Arc, Mutex, Condvar},
+    thread, time::Duration, collections::VecDeque,
 };
 
 static X: [i32; 3] = [1, 2, 3];
@@ -215,7 +215,7 @@ fn main() {
                 let mut guard = n.lock().unwrap();
                 let threadid = thread::current().id();
                 for _ in 0..100 {
-                    println!("updating inner 'n' from thread id : {threadid:?}");
+                    // println!("updating inner 'n' from thread id : {threadid:?}");
                     *guard += 1;
                 }
 
@@ -227,4 +227,60 @@ fn main() {
         }
     });
     assert_eq!(n.into_inner().unwrap(), 1000);
+
+    // thread parking
+    // example use case
+    // if a Vec inside a Mutex is empty, there is not reason the lock it just to check the inner
+    // vec
+    // let queue = Mutex::new(VecDeque::new());
+    // thread::scope(|s| {
+    //     let t = s.spawn(|| loop {
+    //         let item = queue.lock().unwrap().pop_front();
+    //         if let Some(item) = item {
+    //             let threadid = thread::current().id();
+    //             println!("{item} is read from threadid: {threadid:?}");
+    //         } else {
+    //             thread::park();
+    //         }
+    //     });
+    //
+    //     for i in 0.. {
+    //         queue.lock().unwrap().push_back(i);
+    //         let threadid = thread::current().id();
+    //         println!("{i} is pushed from threadid: {threadid:?}");
+    //         t.thread().unpark();
+    //         thread::sleep(Duration::from_secs(1));
+    //     }
+    // });
+
+    // thread parking can use more CPU cycle, 
+    // because of missing notification
+    // calls unpark then park, this makes the CPU waits for the next unpark
+    // use condvar
+    let queue = Mutex::new(VecDeque::new());
+    let not_empty = Condvar::new();
+
+    thread::scope(|s| {
+        s.spawn(|| {
+            loop {
+                let mut q = queue.lock().unwrap();
+                let item = loop {
+                    if let Some(item) = q.pop_front() {
+                        break item;
+                    } else {
+                        q = not_empty.wait(q).unwrap();
+                    }
+                };
+                drop(q);
+                dbg!(item);
+            }
+        });
+
+        for i in 0.. {
+            queue.lock().unwrap().push_back(i);
+            not_empty.notify_one();
+            thread::sleep(Duration::from_secs(1));
+        }
+    })
+
 }
