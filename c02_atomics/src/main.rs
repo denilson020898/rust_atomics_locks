@@ -136,18 +136,43 @@ fn get_x() -> u64 {
     x
 }
 
+fn get_key() -> u64 {
+    static KEY: AtomicU64 = AtomicU64::new(0);
+    let key = KEY.load(Relaxed);
+    if key == 0 {
+        let new_key = generate_random_key();
+        match KEY.compare_exchange(0, new_key, Relaxed, Relaxed) {
+            Ok(_) => new_key,
+            Err(k) => k
+        }
+    } else {
+        key
+    }
+}
+
+fn generate_random_key() -> u64 {
+    todo!()
+}
+
 fn calculate_x() -> u64 {
     todo!()
 }
 
 fn allocate_new_id() -> u32 {
     static NEXT_ID: AtomicU32 = AtomicU32::new(0);
-    let id = NEXT_ID.fetch_add(1, Relaxed);
-    if id >= 1000 {
-        NEXT_ID.fetch_sub(1, Relaxed);
-        panic!("too many ids!");
+    let mut id = NEXT_ID.fetch_add(1, Relaxed);
+    loop {
+        assert!(id < u32::MAX, "too many IDs");
+        match NEXT_ID.compare_exchange_weak(id, id + 1, Relaxed, Relaxed) {
+            Ok(_) => return id,
+            Err(v) => id = v,
+        }
     }
-    return id;
+}
+
+fn allocate_new_id2() -> u32 {
+    static NEXT_ID: AtomicU32 = AtomicU32::new(0);
+    NEXT_ID.fetch_update(Relaxed, Relaxed, |n| n.checked_add(1)).expect("too many ids")
 }
 
 fn increment(a: &AtomicU32) {
