@@ -66,4 +66,10 @@ fn main() {
         });
     });
     println!("All threads completed!");
+
+    let add = |x, y| x + y;
+    let res = add(1,2);
+
+    let report = || println!("the result of the closure is {}", res);
+    report();
 }

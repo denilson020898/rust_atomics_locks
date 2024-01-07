@@ -11,6 +11,7 @@ use std::{
 const TO_PROCESS: usize = 100;
 
 fn main() {
+
     // static STOP: AtomicBool = AtomicBool::new(false);
     // let background_thread = thread::spawn(|| {
     //     while !STOP.load(std::sync::atomic::Ordering::Relaxed) {
@@ -113,6 +114,7 @@ fn main() {
     });
     let n = num_done.load(Relaxed);
     println!("completed with {}", n);
+
 }
 
 fn some_work() {
@@ -137,6 +139,7 @@ fn get_x() -> u64 {
 }
 
 fn get_key() -> u64 {
+
     static KEY: AtomicU64 = AtomicU64::new(0);
     let key = KEY.load(Relaxed);
     if key == 0 {
@@ -148,17 +151,23 @@ fn get_key() -> u64 {
     } else {
         key
     }
+
 }
 
 fn generate_random_key() -> u64 {
+
     todo!()
+
 }
 
 fn calculate_x() -> u64 {
+
     todo!()
+
 }
 
 fn allocate_new_id() -> u32 {
+
     static NEXT_ID: AtomicU32 = AtomicU32::new(0);
     let mut id = NEXT_ID.fetch_add(1, Relaxed);
     loop {
@@ -168,6 +177,7 @@ fn allocate_new_id() -> u32 {
             Err(v) => id = v,
         }
     }
+
 }
 
 fn allocate_new_id2() -> u32 {
@@ -176,6 +186,7 @@ fn allocate_new_id2() -> u32 {
 }
 
 fn increment(a: &AtomicU32) {
+
     let mut current = a.load(Relaxed);
     loop {
         let new = current + 1;
@@ -184,4 +195,6 @@ fn increment(a: &AtomicU32) {
             Err(v) => current = v,
         }
     }
+
 }
+
